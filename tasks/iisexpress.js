@@ -1,8 +1,11 @@
 module.exports = function(grunt) {
 	'use strict';
 
+	var open = require('open');
+	var path = require('path');
+	var readLine = require('readline');
+
 	grunt.registerMultiTask('iisexpress', 'Start an IIS Express process.', function() {
-		var _ = grunt.util._;
 		var options = this.options({
 			cmd: 'c:/program files/iis express/iisexpress.exe',
 			keepalive: false,
@@ -25,7 +28,9 @@ module.exports = function(grunt) {
 		}
 
 		// Convert options to command line parameter format
-		var args = _.map(_.pairs(_.omit(options, ['cmd', 'keepalive', 'killOn', 'killOnExit', 'open', 'openPath', 'openUrl', 'verbose'])), function(option) {
+		var args = Object.entries(options)
+		.filter((option) => !['cmd', 'keepalive', 'killOn', 'killOnExit', 'open', 'openPath', 'openUrl', 'verbose'].includes(option[0]))
+		.map((option) => {
 			if (option[0] == 'path') {
 				option[1] = require('path').resolve(option[1]);
 			}
@@ -35,6 +40,8 @@ module.exports = function(grunt) {
 		var spawnOptions = {
 			detached: true
 		};
+
+		grunt.log.ok('Starting IIS Express...');
 
 		// Start up IIS Express with the specified arguments
 		var spawn = grunt.util.spawn({
@@ -57,6 +64,7 @@ module.exports = function(grunt) {
 
 		grunt.log.ok('Started IIS Express.');
 
+		var done = this.async();
 		if (options.open===true) {
 			if (!options.port && !options.openUrl) {
 				grunt.fail.fatal('Must specify port or openUrl when open==true');
@@ -66,8 +74,7 @@ module.exports = function(grunt) {
 				grunt.log.writeln('opening', url);
 			}
 
-			var done = this.async();
-			require('open')(url, function() {
+			open(url, function() {
 				if (!keepAlive) {
 					done();
 				} else {
@@ -79,29 +86,6 @@ module.exports = function(grunt) {
 		if (keepAlive && !done) {
 			var waitForever = this.async(); // grunt will not finish the task
 			grunt.log.writeln('Waiting forever...');
-		}
-
-		if (options.killOn !== '') {
-			// Register event listener to use to kill spawned process
-			grunt.event.on(options.killOn, kill);
-		}
-
-		if (options.killOnExit===true) {
-			var readLine = require('readline');
-
-			var rl = readLine.createInterface({
-				input: process.stdin,
-				output: process.stdout
-			});
-
-			rl.on('SIGINT', function () {
-				process.emit('SIGINT');
-			});
-
-			process.on('exit', kill);
-			process.on('SIGINT', killAndExit);
-			process.on('SIGHUP', killAndExit);
-			process.on('SIGBREAK', killAndExit);
 		}
 
 		function kill() {
@@ -119,9 +103,33 @@ module.exports = function(grunt) {
 			}
 		}
 
+		if (options.killOn !== '') {
+			// Register event listener to use to kill spawned process
+			grunt.event.on(options.killOn, kill);
+		}
+
 		function killAndExit() {
 			kill();
 			process.exit();
 		}
+
+		if (options.killOnExit===true) {
+
+			var rl = readLine.createInterface({
+				input: process.stdin,
+				output: process.stdout
+			});
+
+			rl.on('SIGINT', function () {
+				process.emit('SIGINT');
+			});
+
+			process.on('exit', kill);
+			process.on('SIGINT', killAndExit);
+			process.on('SIGHUP', killAndExit);
+			process.on('SIGBREAK', killAndExit);
+		}
+		grunt.log.ok('Done.');
+		done();
 	});
 };
