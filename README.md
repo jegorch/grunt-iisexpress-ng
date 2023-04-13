@@ -216,5 +216,5 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 
-0.4.0 - _Forked from [grunt-iisexpress](https://github.com/rpeterclark/grunt-iisexpress)_
-0.5.0 - _update dependencies to latest versions. Fix some issues._
+* 0.4.0 - Forked from [grunt-iisexpress](https://github.com/rpeterclark/grunt-iisexpress)
+* 0.5.0 - Update dependencies to latest versions. Fix some issues.
